@@ -1,0 +1,135 @@
+wget https://www.dropbox.com/s/nmz1zd2bw2n5ora/nyc_311_sample.csv
+hadoop fs -copyFromLocal /home/syed_sofian1/nyc_311_sample.csv /user/syed_sofian1/311_calls/
+create table nycDataSofian2(Unique_Key BIGINT,
+Created_Date STRING,
+Closed_Date STRING,
+Agency STRING,
+Agency_Name STRING,
+Complaint_Type STRING,
+Descriptor STRING,
+Location_Type STRING,
+Incident_Zip STRING,
+Incident_Address STRING,
+Street_Name STRING,
+Cross_Street_1 STRING,
+Cross_Street_2 STRING,
+Intersection_Street_1 STRING,
+Intersection_Street_2 STRING,
+Address_Type STRING,
+City STRING,
+Landmark STRING,
+Facility_Type STRING,
+Status STRING,
+Due_Date STRING,
+Resolution_Description STRING,
+Resolution_Action_Updated_Date STRING,
+Community_Board STRING,
+BBL STRING,
+Borough STRING,
+X_Coordinate_State_Plane BIGINT,
+Y_Coordinate_State_Plane BIGINT,
+Open_Data_Channel_Type STRING,
+Park_Facility_Name STRING,
+Park_Borough STRING,
+Vehicle_Type STRING,
+Taxi_Company_Borough STRING,
+Taxi_Pick_Up_Location STRING,
+Bridge_Highway_Name STRING,
+Bridge_Highway_Direction STRING,
+Road_Ramp STRING,
+Bridge_Highway_Segment STRING,
+Latitude DOUBLE,
+Longitude DOUBLE,
+Location STRING
+);
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+WITH SERDEPROPERTIES (
+    "separatorChar" = ",",
+    "quoteChar"     = "\""
+);
+
+LOAD DATA LOCAL INPATH '/home/syed_sofian1/nyc_311_sample.csv' INTO TABLE nycDataSofian;
+
+1. Top Complaints:
+SELECT
+ complaint_type,
+ COUNT(*) AS total_complaints
+FROM
+  nycdatasofian2
+GROUP BY
+  complaint_type
+ORDER BY
+  total_complaints DESC;
+
+2. Geographic Distributions:
+SELECT
+  borough,
+  COUNT(*) AS total_complaints
+FROM
+  nycdatasofian2
+GROUP BY
+  borough
+ORDER BY
+  total_complaints DESC;
+
+3.Time of Day and Day of week:
+SELECT
+  complaint_type,
+  AVG(unix_timestamp(resolution_action_updated_date, 'MM/dd/yyyy HH:mm:ss') - unix_timestamp(created_date, 'MM/dd/yyyy HH:mm:ss')) AS avg_resolution_time_seconds,
+  FROM_UNIXTIME(CAST(AVG(unix_timestamp(resolution_action_updated_date, 'MM/dd/yyyy HH:mm:ss') - unix_timestamp(created_date, 'MM/dd/yyyy HH:mm:ss')) AS BIGINT), 'HH:mm:ss') AS avg_resolution_time
+FROM
+  nycdatasofian2
+WHERE
+  created_date IS NOT NULL
+  AND resolution_action_updated_date IS NOT NULL
+GROUP BY
+  complaint_type
+ORDER BY
+  complaint_type;
+
+4.Response Time 
+SELECT
+  complaint_type,
+  AVG(
+    UNIX_TIMESTAMP(COALESCE(closed_date, 'mm/dd/yyyy 00:00:00')) - 
+    UNIX_TIMESTAMP(COALESCE(created_date, 'mm/dd/yyyy 00:00:00'))
+  ) AS avg_response_time
+FROM
+  nycDataSofian2
+WHERE
+  closed_date IS NOT NULL
+  AND created_date IS NOT NULL
+GROUP BY
+  complaint_type
+ORDER BY
+  avg_response_time DESC;
+
+5. Trends Overtime 
+
+SELECT
+  year(from_unixtime(unix_timestamp(created_date, 'MM/dd/yyyy HH:mm:ss'))) AS year,
+  month(from_unixtime(unix_timestamp(created_date, 'MM/dd/yyyy HH:mm:ss'))) AS month,
+  COUNT(*) AS total_complaints
+FROM
+  nycdatasofian2
+GROUP BY
+  year(from_unixtime(unix_timestamp(created_date, 'MM/dd/yyyy HH:mm:ss'))),
+  month(from_unixtime(unix_timestamp(created_date, 'MM/dd/yyyy HH:mm:ss')))
+ORDER BY
+  year,
+  month;
+
+6. Demographic Analysis
+SELECT
+  age_group,
+  gender,
+  race,
+  COUNT(*) AS total_complaints
+FROM
+  nycdatasofian2
+GROUP BY
+  age_group,
+  gender,
+  race
+ORDER BY
+  total_complaints DESC;
